@@ -1,0 +1,3 @@
+mosquitto.exe -v -c mosquitto_ext.conf
+C:\Program Files\Mosquitto
+/vibration/data
