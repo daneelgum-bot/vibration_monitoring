@@ -4,12 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "driver/spi_master.h"
+#include "param.h"
 
-typedef struct {
-    float x;
-    float y;
-    float z;
-} adxl345_axes_t;
+
 
 extern spi_device_handle_t spi_adxl;
 

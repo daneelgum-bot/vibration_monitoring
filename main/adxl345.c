@@ -8,7 +8,7 @@ static const char *TAG = "ADXL345_SPI";
 
 #define ADXL345_CS_GPIO     GPIO_NUM_5
 #define ADXL345_SPI_HOST    SPI2_HOST
-#define ADXL345_INT1_GPIO   GPIO_NUM_4
+//#define ADXL345_INT1_GPIO   GPIO_NUM_4
 
 spi_device_handle_t spi_adxl = NULL;
 
@@ -45,7 +45,7 @@ void adxl345_init_spi(void)
 
     spi_device_interface_config_t devcfg = {
         .mode = 3,
-        .clock_speed_hz = 1.5e6,
+        .clock_speed_hz = 5e6,
         .spics_io_num = ADXL345_CS_GPIO,
         .queue_size = 7,
     };

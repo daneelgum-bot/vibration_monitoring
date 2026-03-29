@@ -6,14 +6,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-
+#include "param.h"
 
 
 static const char *TAG = "WiFi";
 
-#define WIFI_SSID      "VONLINE_39"
-#define WIFI_PASS      "00004466"
-#define WIFI_MAX_RETRY 5   
+//#define WIFI_SSID      "VONLINE_39"
+//#define WIFI_PASS      "00004466"
+#define WIFI_MAX_RETRY 10   
 
 
 static EventGroupHandle_t s_wifi_event_group;

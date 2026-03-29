@@ -1,5 +1,6 @@
 #include "mqtt.h"
 #include "esp_log.h"
+#include "param.h"
 
 static const char *TAG = "mqtt_app";
 static esp_mqtt_client_handle_t mqtt_client = NULL;
@@ -23,9 +24,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
 void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.0.131:1883",
+        .broker.address.uri = MQTT_URI,
+        //.broker.address.uri = "mqtt://192.168.1.50:1883",
         .network.disable_auto_reconnect = false,
-        .network.reconnect_timeout_ms = 5000,
+        .network.reconnect_timeout_ms = 500,
         /*.buffer = {
         .size = 2048,           // Размер для входящих сообщений 
         .out_size = 51200,       //для исходящей очереди

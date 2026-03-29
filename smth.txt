@@ -1,3 +1,41 @@
 mosquitto.exe -v -c mosquitto_ext.conf
 C:\Program Files\Mosquitto
 /vibration/data
+
+
+https://market.yandex.ru/card/modul-razrabotki-esp32-wroom-32u-spi-flash-4mb-32mbit/5229932736?do-waremd5=ozsh-khLrHNbEHzaQKeeEw&sponsored=1&cpc=WKwPhdsjvO3qkbUeA0FWfW8SyaqDTJvIL69vaMKymRNY-NMFcjbSXK-jmlU1lyIrr8I3HdJtVc1AAU9tHnE2Y-1EqjSPY-OL5UVlfKDRXa3aK_7nYUUn8POPSsdZiMNpvpUM7GTgrgqeol5mCg-GFBxUkGzB5OygPqMtM62vuzTUlRXkPtSfJGOM11uxXWr5i6sbR76XNXIMRqnBLVrkKFfjvO5n--G9jZj4CE4_CFA46uEFpGhIYemi3aqgUSHXqDQsPW9y7oRHOb-5eZAVECjjUyEIGjyXtloGckmCs7y3Bk1jzmKdO2drU4aMW105E4pX3UYHZjdKMqhfUkYwGuYMbA-c0AALiWdxTVT3WG6u6PljJEQ0d2_KwUkozUh8M1vU37JIgQX6pJS2noHsEGHjtGvyTawaejhT6SxaUR5-IaQ2ZT0VCPrrHkKC9AdzMAfwXL__kEkTofCsulGPkZ-6MCM8OnufkGfrjn2T8h0YA4GO7KaKbuHQ-59wf2XXQ9sgyGDHQL-LUGkGVoZhF_JHKUpdzlH5&nid=18042101&ogV=-12#fullSpecsAnchorId
+
+extern QueueHandle_t s_free_queue;
+extern QueueHandle_t s_data_queue;
+
+не оч. 
+
+
+Получить указатель на следующий заполненный буфер (блокирующий вызов)
+adxl345_buffer_t* get_filled_buffer(void);
+
+Вернуть буфер в пул свободных
+void release_buffer(adxl345_buffer_t *buf);
+
+static QueueHandle_t s_free_queue = NULL;
+static QueueHandle_t s_data_queue = NULL;
+
+adxl345_buffer_t* get_filled_buffer(void) {
+    adxl345_buffer_t *buf = NULL;
+    if (xQueueReceive(s_data_queue, &buf, portMAX_DELAY) == pdTRUE) {
+        return buf;
+    }
+    return NULL;
+}
+
+void release_buffer(adxl345_buffer_t *buf) {
+    if (buf) {
+        xQueueSend(s_free_queue, &buf, 0);
+    }
+}
+
+
+в fft расчет RMS виброскорости по теореме Парсавеля
+
+
+ESP32-D0WD-V3

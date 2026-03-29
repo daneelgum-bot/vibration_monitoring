@@ -1,5 +1,6 @@
 #include "websocket.h"
 #include "esp_log.h"
+#include "param.h"
 
 static const char *TAG = "websocket_app";
 static esp_websocket_client_handle_t websocket_client = NULL;
@@ -28,10 +29,10 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
 void websocket_app_start(void)
 {
     esp_websocket_client_config_t ws_cfg = {
-        .uri = "ws://192.168.0.131:8765", // 
-        .buffer_size = 8192,         
+        .uri = WS_URI,
+        .buffer_size = 16384,         
         .task_stack = 8192,
-        .reconnect_timeout_ms = 5000,
+        .reconnect_timeout_ms = 1500,
         .network_timeout_ms = 10000,  
     };
 
