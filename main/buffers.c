@@ -110,15 +110,11 @@ void adxl345_read_axes(void *pvParameters)
         int16_t raw_y = (int16_t)(rx_buffer[3] | (rx_buffer[4] << 8));
         int16_t raw_z = (int16_t)(rx_buffer[5] | (rx_buffer[6] << 8));
 
-        // current_buf[idx].x = raw_x * 0.004f;
-        // current_buf[idx].y = raw_y * 0.004f;
-        // current_buf[idx].z = raw_z * 0.004f;
         float ax = raw_x * 0.004f;
         float ay = raw_y * 0.004f;
         float az = raw_z * 0.004f;
 
         float module_g = sqrtf(ax * ax + ay * ay + az * az);
-        // current_buf[idx].z = sqrt((raw_z * 0.004f)*(raw_z * 0.004f)+(raw_y * 0.004f)*(raw_y * 0.004f)+(raw_x * 0.004f)*(raw_x * 0.004f));
         current_buf -> accel[idx]=module_g;
         idx++;
 
@@ -170,53 +166,6 @@ void RMS_task(void *pvParameters)
             if (xQueueSend(s_free_queue, &buf, 0) != pdTRUE)
             {
                 ESP_LOGE(TAG, "Failed to return buffer to free_queue");
-            }
-        }
-    }
-}
-
-void wifi_websocket_send_task(void *pvParameters)
-{
-    adxl345_buffer_t *buf;
-    const size_t packet_size = BUF_SIZE * sizeof(float);
-
-    while (1)
-    {
-        if (xQueueReceive(s_data_queue, &buf, portMAX_DELAY) == pdTRUE)
-        {
-            if (buf == NULL)
-            {
-                ESP_LOGE(TAG, "Received NULL buffer from data_queue");
-                continue;
-            }
-
-            esp_websocket_client_handle_t ws_client = websocket_app_get_client();
-            if (ws_client == NULL || !esp_websocket_client_is_connected(ws_client))
-            {
-                ESP_LOGW(TAG2, "WebSocket client not ready, dropping packet");
-            }
-            else
-            {
-
-                int bytes_sent = esp_websocket_client_send_bin(ws_client,
-                                                               (const char *)buf->accel,
-                                                               packet_size,
-                                                               pdMS_TO_TICKS(100));
-
-                if (bytes_sent > 0)
-                {
-                    ESP_LOGI(TAG2, "Sent %d bytes via WebSocket", bytes_sent);
-                }
-                else if (bytes_sent == -1)
-                {
-                    ESP_LOGE(TAG2, "WebSocket send timeout or error");
-                }
-            }
-
-            // возращение буфера в свободную очередь
-            if (xQueueSend(s_free_queue, &buf, 0) != pdTRUE)
-            {
-                ESP_LOGE(TAG2, "FAILED TO RETURN BUF TO FREE QUEUE");
             }
         }
     }

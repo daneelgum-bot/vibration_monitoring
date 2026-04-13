@@ -6,8 +6,12 @@
 
 static const char *TAG = "ADXL345_SPI";
 
-#define ADXL345_CS_GPIO     GPIO_NUM_5
+#define ADXL345_CS_GPIO     GPIO_NUM_15
 #define ADXL345_SPI_HOST    SPI2_HOST
+#define ADXL345_MISO        GPIO_NUM_12 //фиол SDO
+#define ADXL345_MOSI        GPIO_NUM_13 //оранж SDA
+#define ADXL345_SCLK        GPIO_NUM_14
+
 //#define ADXL345_INT1_GPIO   GPIO_NUM_4
 
 spi_device_handle_t spi_adxl = NULL;
@@ -36,9 +40,9 @@ void adxl345_write_byte(uint8_t reg_addr, uint8_t data)
 void adxl345_init_spi(void)
 {
     spi_bus_config_t buscfg = {
-        .miso_io_num = GPIO_NUM_19,
-        .mosi_io_num = GPIO_NUM_23,
-        .sclk_io_num = GPIO_NUM_18,
+        .miso_io_num = ADXL345_MISO,
+        .mosi_io_num = ADXL345_MOSI,
+        .sclk_io_num = ADXL345_SCLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = 10};

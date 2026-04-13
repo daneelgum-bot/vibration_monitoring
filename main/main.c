@@ -14,10 +14,11 @@
 #include "fft_test.h"
 #include "esp_private/esp_clk.h"
 
+#include "ethernet.h"
 #include "esp_system.h"
 #include "esp_chip_info.h"
 static const char *TAG = "MAIN";
-void wifi_rssi_task(void *pvParameters)
+/*void wifi_rssi_task(void *pvParameters)
 {
     int8_t power = 0;         // текущая мощность
     wifi_ap_record_t ap_info; // для получения RSSI
@@ -43,7 +44,7 @@ void wifi_rssi_task(void *pvParameters)
             ESP_LOGE("wifi", "Failed to get TX power, error: %d", err);
         }
     }
-}
+}*/
 
 void app_main(void)
 {
@@ -78,7 +79,7 @@ void app_main(void)
     }
     adxl345_configure();
 
-    ret = wifi_init_sta();
+    /*ret = wifi_init_sta();
     if (ret != ESP_OK)
     {
         ESP_LOGE("wifi", "Failed to connect to Wi-Fi");
@@ -88,7 +89,12 @@ void app_main(void)
         ESP_LOGI("wifi", "Wi-Fi connected successfully");
     }
     vTaskDelay(pdMS_TO_TICKS(500));
-    // mqtt_app_start();
+    // mqtt_app_start();*/
+
+
+
+    ethernet_init();
+    vTaskDelay(pdMS_TO_TICKS(1000));
     websocket_app_start();
 
     buffers_init();

@@ -16,7 +16,7 @@
 
 #define BUF_SIZE        1024
 #define MQTT_URI        "mqtt://192.168.31.22:1883" 
-#define WS_URI          "ws://192.168.0.223:8765"
+#define WS_URI          "ws://192.168.0.153:8765"
 
 
 #endif

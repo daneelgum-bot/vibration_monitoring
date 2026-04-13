@@ -1,0 +1,1 @@
+void ethernet_init(void);
