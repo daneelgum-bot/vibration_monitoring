@@ -2,105 +2,107 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "esp_wifi.h"
-#include "adxl345.h"
-#include "buffers.h"
-#include "wifi.h"
 #include "nvs_flash.h"
-#include "mqtt_client.h"
-#include "mqtt.h"
-#include "websocket.h"
-#include "fft.h"
-#include "fft_test.h"
-#include "esp_private/esp_clk.h"
-
+#include "new_adxl_two.h"
+#include "new_buffers.h"
+//#include "wifi.h"        // ваша инициализация Wi‑Fi
+#include "websocket.h"   // ваш модуль WebSocket
 #include "ethernet.h"
-#include "esp_system.h"
-#include "esp_chip_info.h"
+#include "new_fft.h"
+#include "driver/gpio.h"
+
 static const char *TAG = "MAIN";
-/*void wifi_rssi_task(void *pvParameters)
+
+// Пины для первой шины SPI2 (датчик 1)
+#define SPI2_MISO   12 //фиол SDO
+#define SPI2_MOSI   13 //оранж SDA
+#define SPI2_SCLK   14
+#define SPI2_CS1    32 //замена 32
+
+// Пины для второй шины (датчик 2)
+#define SPI3_MISO   5 //замена на 5 (33)
+#define SPI3_MOSI   16
+#define SPI3_SCLK   4
+#define SPI3_CS2    15
+
+
+#define CYCLE_PIN GPIO_NUM_34
+volatile bool g_cycle_active = false;
+
+static void IRAM_ATTR cycle_isr_handler(void *arg)
 {
-    int8_t power = 0;         // текущая мощность
-    wifi_ap_record_t ap_info; // для получения RSSI
+    // При использовании подтяжки к GND (pull-down)
+    g_cycle_active = (gpio_get_level(CYCLE_PIN) == 1);
+}
 
-    while (1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        // --- Получаем уровень сигнала (RSSI) ---
-        esp_wifi_sta_get_ap_info(&ap_info);
-        ESP_LOGI("wifi", "Connected to %s, RSSI: %d dBm", ap_info.ssid, ap_info.rssi);
-
-        // --- Получаем текущую мощность передатчика ---
-        esp_err_t err = esp_wifi_get_max_tx_power(&power);
-        if (err == ESP_OK)
-        {
-            // Мощность в единицах по 0.25 dBm. Переведём в dBm для наглядности.
-            float power_dbm = power * 0.25f;
-            ESP_LOGI("wifi", "Current TX power: set value = %d (%.2f dBm)", power, power_dbm);
-        }
-        else
-        {
-            ESP_LOGE("wifi", "Failed to get TX power, error: %d", err);
-        }
-    }
-}*/
 
 void app_main(void)
 {
-    int cpu_freq_hz = esp_clk_cpu_freq();
-    int cpu_freq_mhz = cpu_freq_hz / 1000000;
-    ESP_LOGI("CPU", "Текущая частота: %d МГц", cpu_freq_mhz);
 
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
+    gpio_config_t io_conf = {
+    .pin_bit_mask = (1ULL << CYCLE_PIN),
+    .mode = GPIO_MODE_INPUT,
+    .pull_up_en = GPIO_PULLUP_DISABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE, // Внутренние подтяжки не работают
+    .intr_type = GPIO_INTR_ANYEDGE
+};
+gpio_config(&io_conf);
+gpio_install_isr_service(0);
+gpio_isr_handler_add(CYCLE_PIN, cycle_isr_handler, NULL);
 
-    ESP_LOGI(TAG, "Model: %d", chip_info.model);
 
-    ESP_LOGI(TAG, "Revision: %d", chip_info.revision);
-    // esp_log_level_set("*", ESP_LOG_INFO);
-    vTaskDelay(pdMS_TO_TICKS(500));
+if (gpio_get_level(CYCLE_PIN) == 1) {
+    ESP_LOGI(TAG, "Pin %d is already high, triggering event manually.", CYCLE_PIN);
+    g_cycle_active = true; // Устанавливаем флаг вручную
+    // Если бы вы использовали очередь, то отправили бы событие в нее
+}
+
+    // Инициализация NVS
     esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
-    adxl345_init_spi();
-    adxl345_force_4wire_spi();
-    vTaskDelay(pdMS_TO_TICKS(50));
+    ESP_ERROR_CHECK(adxl345_bus_init(SPI2_HOST, SPI2_MISO, SPI2_MOSI, SPI2_SCLK));
+    ESP_ERROR_CHECK(adxl345_bus_init(SPI3_HOST, SPI3_MISO, SPI3_MOSI, SPI3_SCLK));
 
-    if (!adxl345_check_presence())
-    {
+    // Создаём два устройства
+    static adxl345_t dev1, dev2;
+    ESP_ERROR_CHECK(adxl345_init(&dev1, SPI2_HOST, SPI2_CS1));
+    ESP_ERROR_CHECK(adxl345_init(&dev2, SPI3_HOST, SPI3_CS2));
+
+    adxl345_force_4wire_spi(&dev1);
+    adxl345_force_4wire_spi(&dev2);
+
+    adxl345_configure(&dev1);
+    adxl345_configure(&dev2);
+
+ 
+    if (!adxl345_check_presence(&dev1) || !adxl345_check_presence(&dev2)) {
+        ESP_LOGE(TAG, "One or both ADXL345 not found!");
         return;
     }
-    adxl345_configure();
 
-    /*ret = wifi_init_sta();
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE("wifi", "Failed to connect to Wi-Fi");
-    }
-    else
-    {
-        ESP_LOGI("wifi", "Wi-Fi connected successfully");
-    }
-    vTaskDelay(pdMS_TO_TICKS(500));
-    // mqtt_app_start();*/
+    // Инициализация буферов и очередей
+    buffers_init();
 
-
-
+    // Параметры для задач чтения
+    static read_task_param_t param1 = { .dev = &dev1, .sensor_id = 1 };
+    static read_task_param_t param2 = { .dev = &dev2, .sensor_id = 2 };
     ethernet_init();
     vTaskDelay(pdMS_TO_TICKS(1000));
     websocket_app_start();
+    // Задачи чтения (по одной на каждый датчик)
+    xTaskCreatePinnedToCore(adxl345_read_axes, "read1", 4096, &param1, 5, NULL, 1);
+    xTaskCreatePinnedToCore(adxl345_read_axes, "read2", 4096, &param2, 5, NULL, 1);
 
-    buffers_init();
-
-    xTaskCreatePinnedToCore(adxl345_read_axes, "read_axes", 4096, NULL, 5, NULL, 1);
-    xTaskCreatePinnedToCore(websocket_send_spectrum_task, "wifi_send", 8192, NULL, 3, NULL, 0);
+    // Задача БПФ (обрабатывает данные из s_data_queue)
     xTaskCreatePinnedToCore(fft_task, "FFT", 8192, NULL, 4, NULL, 0);
-    // xTaskCreatePinnedToCore(fft_test_task, "FFT_TEST", 8192, NULL, 4, NULL, 0);
+
+    // Задача отправки спектра через WebSocket
+    xTaskCreatePinnedToCore(websocket_send_spectrum_task, "ws_send", 8192, NULL, 3, NULL, 0);
+
+    ESP_LOGI(TAG, "System started with 2 ADXL345 sensors on separate SPI buses");
 }

@@ -22,6 +22,7 @@ typedef struct {
 } adxl345_buffer_t;
 
 
+
 extern QueueHandle_t s_free_queue;
 extern QueueHandle_t s_data_queue;
 extern QueueHandle_t s_spectrum_queue;
